@@ -60,16 +60,19 @@ table(iris_3$TX_PAUV, useNA = "always")
 setdiff(iris_3$ID, reference_iris_3$ID)
 
 iris_4 <- iris_3 %>% 
-  left_join(reference_iris_3 %>% dplyr::select(ID, LIB_IRIS, LIBCOM, REG, DEP),
+  left_join(reference_iris_3 %>% dplyr::select(ID, LIB_IRIS, DEPCOM, LIBCOM, REG, DEP),
             by = "ID")
 
 glimpse(iris_4)
 
 iris_5 <- iris_4 %>% 
-  filter(!(ID %in% c("972", "974")))
+  filter(!(ID %in% c("972", "974"))) %>% 
+  relocate(TX_PAUV, .after = DEP)
 
 iris <- iris_5 %>% 
   mutate(TX_PAUV = as.numeric((TX_PAUV)))
+
+glimpse(iris)
 
 
 

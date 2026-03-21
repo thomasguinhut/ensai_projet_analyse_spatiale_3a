@@ -66,16 +66,22 @@ epci_4 <- epci_3 %>%
 
 glimpse(epci_4)
 
-table(epci_4$TX_PAUV, useNA = "always")
-
 epci_5 <- epci_4 %>% 
-  mutate(TX_PAUV = ifelse(TX_PAUV == "N/A - résultat non disponible", NA, TX_PAUV))
+  left_join(liste_epci_2022_4 %>% dplyr::select(ID, DEP, REG), by = "ID")
+
+glimpse(epci_5)
 
 table(epci_5$TX_PAUV, useNA = "always")
 
-epci <- epci_5 %>% 
+epci_6 <- epci_5 %>% 
+  relocate(TX_PAUV, .after = REG)
+
+table(epci_6$TX_PAUV, useNA = "always")
+
+epci <- epci_6 %>% 
   mutate(TX_PAUV = as.numeric((TX_PAUV)))
 
+glimpse(epci)
 
 
 ################################################################################

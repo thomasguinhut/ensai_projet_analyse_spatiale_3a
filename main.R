@@ -4,7 +4,8 @@
 
 
 
-packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2")
+packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
+                     "classInt", "rnaturalearthdata")
 
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
