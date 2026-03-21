@@ -4,7 +4,7 @@
 
 
 
-packages_requis <- c("aws.s3", "dplyr")
+packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2")
 
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
@@ -18,3 +18,5 @@ pacman::p_load(char = packages_requis)
 ################################################################################
 ############################ IMPORTATION DES DONNÉES ###########################
 ################################################################################
+
+source("R/A-preparation_donnees/A0-import_donnees.R")
