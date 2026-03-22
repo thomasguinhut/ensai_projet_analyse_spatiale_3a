@@ -65,9 +65,15 @@ epci_4 <- epci_3 %>%
   dplyr::select(ID, ID_NAME, TX_PAUV)
 
 glimpse(epci_4)
+glimpse(liste_epci_2022_4)
 
 epci_5 <- epci_4 %>% 
-  left_join(liste_epci_2022_4 %>% dplyr::select(ID, DEP, REG), by = "ID")
+  left_join(
+    liste_epci_2022_4 %>% 
+      distinct(ID, .keep_all = TRUE) %>% 
+      dplyr::select(ID, DEP, REG),
+    by = "ID"
+  )
 
 glimpse(epci_5)
 

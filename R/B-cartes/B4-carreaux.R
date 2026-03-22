@@ -2,34 +2,43 @@
 # 1. Préparation des données
 # ===============================
 
-# Extraction des coordonnées depuis l'ID INSPIRE
-# Format : CRS3035RES1000mN{nord}E{est}
-carreaux <- carreaux %>%
-  mutate(
-    res  = as.numeric(str_extract(ID, "(?<=RES)\\d+")),        # résolution en mètres
-    nord = as.numeric(str_extract(ID, "(?<=N)\\d+(?=E)")),     # coordonnée Nord
-    est  = as.numeric(str_extract(ID, "(?<=E)\\d+$"))          # coordonnée Est
-  )
+# Fonds Europe et océan
+europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf")
+ocean  <- ne_download(scale = "medium", type = "ocean", category = "physical", returnclass = "sf")
 
-# Création des géométries (coin inférieur gauche + résolution)
-carreaux_sf <- carreaux %>%
-  mutate(geometry = purrr::map2(est, nord, function(e, n) {
-    st_polygon(list(matrix(c(
-      e,       n,
-      e + res, n,
-      e + res, n + res,
-      e,       n + res,
-      e,       n
-    ), ncol = 2, byrow = TRUE)))
-  })) %>%
-  st_as_sf(crs = 3035) %>%
+# Extraction vectorisée des coordonnées depuis l'ID INSPIRE
+res  <- as.numeric(str_extract(carreaux$ID, "(?<=RES)\\d+"))
+nord <- as.numeric(str_extract(carreaux$ID, "(?<=N)\\d+(?=E)"))
+est  <- as.numeric(str_extract(carreaux$ID, "(?<=E)\\d+$"))
+
+# Création des WKT directement (beaucoup plus léger)
+wkt <- paste0(
+  "POLYGON((",
+  est,       " ", nord,       ",",
+  est + res, " ", nord,       ",",
+  est + res, " ", nord + res, ",",
+  est,       " ", nord + res, ",",
+  est,       " ", nord,
+  "))"
+)
+
+# Conversion en sf en une seule opération
+carreaux_sf <- st_as_sf(
+  data.frame(TX_PAUV = carreaux$TX_PAUV, wkt = wkt),
+  wkt = "wkt",
+  crs = 3035
+) %>%
   st_transform(2154)
+
+# Reprojection Europe et océan
+europe <- st_transform(europe, 2154)
+ocean  <- st_transform(ocean, 2154)
 
 # Discrétisation
 bornes <- classIntervals(
   carreaux_sf$TX_PAUV,
   n = 5,
-  style = "fisher"
+  style = "quantile"
 )$brks
 
 pal <- "YlOrRd"
@@ -69,17 +78,29 @@ mf_map(
   type    = "choro",
   breaks  = bornes,
   pal     = pal,
-  border  = NA,        # pas de bordure, trop de carreaux
-  lwd     = 0,
+  border  = NA,
+  lwd     = 0.001,
   leg_pos = NA,
   add     = TRUE
 )
 
 # Labels mer
-text(x = 200000, y = 6500000, labels = "Océan\nAtlantique",
-     col = "#1a5276", cex = 0.65, font = 3)
-text(x = 900000, y = 6100000, labels = "Mer\nMéditerranée",
-     col = "#1a5276", cex = 0.65, font = 3)
+text(
+  x      = 200000,
+  y      = 6500000,
+  labels = "Océan\nAtlantique",
+  col    = "#1a5276",
+  cex    = 0.65,
+  font   = 3
+)
+text(
+  x      = 900000,
+  y      = 6100000,
+  labels = "Mer\nMéditerranée",
+  col    = "#1a5276",
+  cex    = 0.65,
+  font   = 3
+)
 
 # ===============================
 # 4. Légende
@@ -89,7 +110,7 @@ mf_legend(
   type  = "choro",
   val   = bornes,
   pal   = pal,
-  title = "Taux de pauvreté en %\n(discrétisation de Fisher)",
+  title = "Taux de pauvreté en %\n(discrétisation de quantiles)",
   pos   = "left"
 )
 
@@ -110,7 +131,7 @@ mf_theme(
   )
 )
 mf_layout(
-  title   = "Taux de pauvreté par carreau de 1 km² en 2021",
+  title   = "Taux de pauvreté par carreau au niveau naturel en 2021",
   credits = "Source : Insee",
   arrow   = TRUE
 )

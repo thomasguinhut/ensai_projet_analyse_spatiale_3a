@@ -5,7 +5,7 @@
 
 
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
-                     "classInt", "rnaturalearthdata")
+                     "classInt", "rnaturalearth")
 
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
@@ -13,6 +13,8 @@ if (!"pacman" %in% installed.packages()) {
 library(pacman)
 
 pacman::p_load(char = packages_requis)
+
+rm(packages_requis)
 
 
 
