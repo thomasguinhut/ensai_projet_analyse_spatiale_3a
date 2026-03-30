@@ -1,4 +1,4 @@
-glimpse(epci)
+plot_epci <- function(var = "TX_PAUV"){
 
 fonds_epci <- aws.s3::s3read_using(
   FUN = st_read,
@@ -6,8 +6,6 @@ fonds_epci <- aws.s3::s3read_using(
   bucket = "thomasguinhut",
   opts = list("region" = "")
 )
-
-glimpse(fonds_epci)
 
 # ===============================
 # 1. Préparation des données
@@ -29,7 +27,7 @@ ocean  <- st_transform(ocean, 2154)
 
 # Discrétisation
 bornes <- classIntervals(
-  fonds_epci$TX_PAUV,
+  fonds_epci[[var]],
   n = 5,
   style = "quantile"
 )$brks
@@ -67,7 +65,7 @@ mf_map(europe, col = "#4a5568", border = "grey60", lwd = 0.3, add = TRUE)
 # EPCI
 mf_map(
   fonds_epci,
-  var     = "TX_PAUV",
+  var     = var,
   type    = "choro",
   breaks  = bornes,
   pal     = pal,
@@ -99,11 +97,14 @@ text(
 # 4. Légende
 # ===============================
 mf_theme("default")
+titre_legende <- ifelse(var == "TX_PAUV",
+                        "Taux de pauvreté en %\n(discrétisation de quantiles)",
+                "\n(discrétisation de quantiles)")
 mf_legend(
   type  = "choro",
   val   = bornes,
   pal   = pal,
-  title = "Taux de pauvreté en %\n(discrétisation de quantiles)",
+  title = titre_legende,
   pos   = "left"
 )
 
@@ -123,9 +124,13 @@ mf_theme(
     font  = 2
   )
 )
+titre <- ifelse(var == "TX_PAUV",
+                "Taux de pauvreté par EPCI de France métropolitaine en 2021",
+                paste0(var, " par EPCI de France métropolitaine"))
 mf_layout(
-  title   = "Taux de pauvreté par EPCI de France métropolitaine en 2021",
+  title   = titre,
   credits = "Source : Insee",
   arrow   = TRUE
 )
 
+}

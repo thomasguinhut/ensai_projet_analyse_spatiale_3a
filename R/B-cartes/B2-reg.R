@@ -1,13 +1,11 @@
-fonds_reg <- aws.s3::s3read_using(
+plot_reg <- function(var = "TX_PAUV"){
+  
+  fonds_reg <- aws.s3::s3read_using(
   FUN = st_read,
   object = "diffusion/projet_analyse_spatiale/fonds_carte/regions.geojson",
   bucket = "thomasguinhut",
   opts = list("region" = "")
 )
-
-glimpse(fonds_reg)
-
-glimpse(reg)
 
 # ===============================
 # 1. Préparation des données
@@ -26,7 +24,7 @@ ocean     <- st_transform(ocean, 2154)
 
 # Discrétisation
 bornes <- classIntervals(
-  fonds_reg$TX_PAUV,
+  fonds_reg[[var]],
   n = 5,
   style = "fisher"
 )$brks
@@ -64,7 +62,7 @@ mf_map(europe, col = "#4a5568", border = "grey60", lwd = 0.3, add = TRUE)
 # Régions françaises
 mf_map(
   fonds_reg,
-  var     = "TX_PAUV",
+  var     = var,
   type    = "choro",
   breaks  = bornes,
   pal     = pal,
@@ -95,7 +93,7 @@ text(
 
 mf_label(
   fonds_reg,
-  var     = "TX_PAUV",
+  var     = var,
   col     = "white",
   halo    = TRUE,
   bg      = "grey20",
@@ -138,3 +136,4 @@ mf_layout(
   arrow   = TRUE
 )
 
+}

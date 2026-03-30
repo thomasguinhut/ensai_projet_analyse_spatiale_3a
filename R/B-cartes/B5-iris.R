@@ -1,13 +1,11 @@
-fonds_iris <- aws.s3::s3read_using(
+plot_iris <- function(var = "TX_PAUV"){
+  
+  fonds_iris <- aws.s3::s3read_using(
   FUN = st_read,
   object = "diffusion/projet_analyse_spatiale/fonds_carte/iris.gpkg",
   bucket = "thomasguinhut",
   opts = list("region" = "")
 )
-
-glimpse(fonds_iris)
-
-glimpse(iris)
 
 # ===============================
 # 1. Préparation des données
@@ -15,9 +13,18 @@ glimpse(iris)
 fonds_iris <- fonds_iris %>%
   left_join(iris, by = c("code_iris" = "ID"))
 
+# Fonds Europe et océan
+europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf")
+ocean  <- ne_download(scale = "medium", type = "ocean", category = "physical", returnclass = "sf")
+
+# Reprojection
+fonds_iris <- st_transform(fonds_iris, 2154)
+europe    <- st_transform(europe, 2154)
+ocean     <- st_transform(ocean, 2154)
+
 # Discrétisation
 bornes <- classIntervals(
-  fonds_iris$TX_PAUV,
+  fonds_iris[[var]],
   n = 5,
   style = "quantile"
 )$brks
@@ -55,7 +62,7 @@ mf_map(europe, col = "#4a5568", border = "grey60", lwd = 0.3, add = TRUE)
 # IRIS
 mf_map(
   fonds_iris,
-  var     = "TX_PAUV",
+  var     = var,
   type    = "choro",
   breaks  = bornes,
   pal     = pal,
@@ -116,3 +123,5 @@ mf_layout(
   credits = "Source : Insee",
   arrow   = TRUE
 )
+
+}
