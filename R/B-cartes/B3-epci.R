@@ -129,7 +129,7 @@ titre <- ifelse(var == "TX_PAUV",
                 paste0(var, " par EPCI de France métropolitaine"))
 mf_layout(
   title   = titre,
-  credits = "Source : Insee",
+  credits = "Source : Insee, EPCI au 1er janvier 2022",
   arrow   = TRUE
 )
 
