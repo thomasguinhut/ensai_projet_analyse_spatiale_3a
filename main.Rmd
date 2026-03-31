@@ -5,7 +5,7 @@ output: html_document
 
 # Installation des packages
 
-```{r}
+```{r, message=FALSE}
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
                      "classInt", "rnaturalearth", "rnaturalearthdata",
                      "remotes", "spdep")
@@ -29,11 +29,10 @@ source("R/A-preparation_donnees/A0-import_donnees.R")
 # Cartes
 
 ```{r}
-source("")
+source("R/B-cartes/B0-import_fonctions_carte.R")
 ```
 
-
-```{r}
+```{r, message=FALSE}
 plot_dep()
 plot_reg()
 plot_carreaux()
