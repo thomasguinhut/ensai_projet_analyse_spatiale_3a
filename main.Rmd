@@ -1,0 +1,346 @@
+---
+title: "main"
+output: html_document
+---
+
+# Installation des packages
+
+```{r}
+packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
+                     "classInt", "rnaturalearth", "rnaturalearthdata",
+                     "remotes", "spdep")
+
+if (!"pacman" %in% installed.packages()) {
+  install.packages("pacman")
+}
+library(pacman)
+
+pacman::p_load(char = packages_requis)
+
+rm(packages_requis)
+```
+
+# Importation des données
+
+```{r}
+source("R/A-preparation_donnees/A0-import_donnees.R")
+```
+
+# Cartes
+
+```{r}
+plot_carte <- function(var = "TX_PAUV", niveau = c("dep", "reg", "epci", "carreaux", "iris"),
+                       style = c("jenks", "quantile", "equal")) {
+  
+  niveau <- match.arg(niveau)
+  style  <- match.arg(style)
+  
+  # ===============================
+  # 1. Chargement et préparation des données
+  # ===============================
+  
+  dark_theme <- list(
+    bg = "#4a5568", fg = "white", mar = c(0, 0, 1.5, 0),
+    tab = FALSE, pos = "left", inner = FALSE,
+    line = 1.5, cex = 1, font = 2
+  )
+  
+  s3_read <- function(object) {
+    aws.s3::s3read_using(
+      FUN    = st_read,
+      object = object,
+      bucket = "thomasguinhut",
+      opts   = list("region" = "")
+    )
+  }
+  
+  if (niveau == "carreaux") {
+    
+    res  <- as.numeric(str_extract(carreaux$ID, "(?<=RES)\\d+"))
+    nord <- as.numeric(str_extract(carreaux$ID, "(?<=N)\\d+(?=E)"))
+    est  <- as.numeric(str_extract(carreaux$ID, "(?<=E)\\d+$"))
+    
+    wkt <- paste0(
+      "POLYGON((",
+      est,       " ", nord,       ",",
+      est + res, " ", nord,       ",",
+      est + res, " ", nord + res, ",",
+      est,       " ", nord + res, ",",
+      est,       " ", nord, "))"
+    )
+    
+    fonds <- st_as_sf(
+      setNames(data.frame(carreaux[[var]], wkt), c(var, "wkt")),
+      wkt = "wkt", crs = 3035
+    ) %>% st_transform(2154)
+    
+  } else {
+    
+    cfg <- list(
+      dep  = list(object  = "diffusion/projet_analyse_spatiale/fonds_carte/departements.geojson",
+                  data    = dep,  join_by = c("code" = "ID")),
+      reg  = list(object  = "diffusion/projet_analyse_spatiale/fonds_carte/regions.geojson",
+                  data    = reg,  join_by = c("code" = "ID")),
+      epci = list(object  = "diffusion/projet_analyse_spatiale/fonds_carte/epci.gpkg",
+                  data    = epci, join_by = c("CODE_SIREN" = "ID"), pre_filter = TRUE),
+      iris = list(object  = "diffusion/projet_analyse_spatiale/fonds_carte/iris.gpkg",
+                  data    = iris, join_by = c("code_iris" = "ID"))
+    )
+    
+    cf    <- cfg[[niveau]]
+    fonds <- s3_read(cf$object)
+    
+    if (isTRUE(cf$pre_filter)) {
+      fonds <- fonds %>% filter(CODE_SIREN %in% cf$data$ID)
+    }
+    
+    fonds <- fonds %>%
+      left_join(cf$data, by = cf$join_by) %>%
+      st_transform(2154)
+  }
+  
+  # ===============================
+  # 2. Fonds Europe et océan
+  # ===============================
+  europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf") %>% st_transform(2154)
+  ocean  <- ne_download(scale = "medium", type = "ocean", category = "physical", returnclass = "sf") %>% st_transform(2154)
+  
+  # ===============================
+  # 3. Discrétisation
+  # ===============================
+  label_disc <- switch(style,
+    jenks    = "discrétisation de Jenks",
+    quantile = "discrétisation par quantiles",
+    equal    = "discrétisation à intervalles égaux"
+  )
+  
+  bornes <- classIntervals(fonds[[var]], n = 5, style = style)$brks
+  pal    <- "YlOrRd"
+  
+  # ===============================
+  # 4. Épaisseur des bordures
+  # ===============================
+  lwd_fonds  <- switch(niveau, dep = 0.4, reg = 0.6, epci = 0.2, carreaux = 0.001, iris = 0.001)
+  border_col <- switch(niveau, dep = "black", reg = "black", epci = "black", carreaux = NA, iris = NA)
+  
+  # ===============================
+  # 5. Carte principale
+  # ===============================
+  mf_theme(dark_theme)
+  mf_init(fonds, expandBB = c(0.05, 0.27, 0.05, 0.2))
+  
+  mf_map(ocean,  col = "#a8c8e8", border = NA,      add = TRUE)
+  mf_map(europe, col = "#4a5568", border = "grey60", lwd = 0.3, add = TRUE)
+  
+  mf_map(
+    fonds, var = var, type = "choro",
+    breaks = bornes, pal = pal,
+    border = border_col, lwd = lwd_fonds,
+    leg_pos = NA, add = TRUE
+  )
+  
+  text(x = 200000, y = 6500000, labels = "Océan\nAtlantique", col = "#1a5276", cex = 0.65, font = 3)
+  text(x = 900000, y = 6100000, labels = "Mer\nMéditerranée", col = "#1a5276", cex = 0.65, font = 3)
+  
+  # ===============================
+  # 6. Spécificités par niveau
+  # ===============================
+  if (niveau == "dep") {
+    
+    fonds_idf <- fonds %>% filter(code %in% c("75", "92", "93", "94"))
+    
+    bbox_idf <- st_bbox(fonds_idf)
+    bbox_idf[c("xmin", "ymin")] <- bbox_idf[c("xmin", "ymin")] - 10000
+    bbox_idf[c("xmax", "ymax")] <- bbox_idf[c("xmax", "ymax")] + 10000
+    mf_map(bbox_idf %>% st_as_sfc() %>% st_as_sf(), border = "black", lwd = 2, col = NA, add = TRUE)
+    
+    mf_inset_on(fonds_idf, pos = "topright", cex = 0.22)
+    mf_init(fonds_idf, expandBB = c(0.3, 0.2, 0.3, 0.2))
+    mf_map(fonds_idf, var = var, type = "choro", breaks = bornes, pal = pal,
+           border = "white", lwd = 0.8, leg_pos = NA, add = TRUE)
+    mf_label(fonds_idf, var = "nom", col = "white", halo = TRUE, bg = "grey20", cex = 0.6, overlap = FALSE)
+    mf_scale(size = 10, col = "white")
+    box(which = "plot", col = "white", lwd = 1.5)
+    mf_inset_off()
+    
+  } else if (niveau == "reg") {
+    
+    mf_label(fonds, var = var, col = "white", halo = TRUE, bg = "grey20", cex = 0.75, overlap = FALSE, r = 0.07)
+  }
+  
+  # ===============================
+  # 7. Légende et habillage
+  # ===============================
+  titres <- list(
+    dep      = list(carte = "Taux de pauvreté par département de France métropolitaine en 2021", credits = "Source : Insee"),
+    reg      = list(carte = "Taux de pauvreté par région de France métropolitaine en 2021",     credits = "Source : Insee"),
+    epci     = list(carte = "Taux de pauvreté par EPCI de France métropolitaine en 2021",        credits = "Source : Insee, EPCI au 1er janvier 2022"),
+    carreaux = list(carte = "Taux de pauvreté par carreau au niveau naturel en 2021",            credits = "Source : Insee"),
+    iris     = list(carte = "Taux de pauvreté par IRIS en 2021",                                 credits = "Source : Insee")
+  )
+  
+  mf_theme("default")
+  mf_legend(
+    type  = "choro",
+    val   = bornes,
+    pal   = pal,
+    title = paste0("Taux de pauvreté en %\n(", label_disc, ")"),
+    pos   = "left"
+  )
+  
+  mf_theme(dark_theme)
+  mf_layout(
+    title   = titres[[niveau]]$carte,
+    credits = titres[[niveau]]$credits,
+    arrow   = TRUE
+  )
+}
+```
+
+```{r}
+plot_map(niveau = "dep")
+```
+
+
+```{r}
+plot_dep()
+plot_reg()
+plot_carreaux()
+plot_iris()
+plot_epci()
+plot_epci(var = "PART_BAC5PLUS_2022")
+plot_epci(var = "PART_CHOMAGE_REV_2021")
+```
+
+# Analyses statistiques
+
+```{r}
+fonds_epci <- aws.s3::s3read_using(
+  FUN = st_read,
+  object = "diffusion/projet_analyse_spatiale/fonds_carte/epci.gpkg",
+  bucket = "thomasguinhut",
+  opts = list("region" = "")
+)
+fonds_epci <- fonds_epci %>% 
+  filter(CODE_SIREN %in% epci$ID)
+fonds_epci <- fonds_epci %>%
+  left_join(epci, by = c("CODE_SIREN" = "ID"))
+```
+
+Construction de la matrice des voisins.
+
+```{r}
+voisins_epci <- poly2nb(fonds_epci) # par défaut : queen = TRUE
+```
+
+Certaines EPCI n'ont pas de voisins.
+
+```{r}
+sans_voisins <- which(card(voisins_epci) == 0)
+fonds_epci[sans_voisins, "NOM"]
+```
+
+Ce problème concerne des îles, nous les retirons
+
+```{r}
+fonds_epci_cont <- fonds_epci[-sans_voisins, ]
+```
+
+```{r}
+voisins_epci_cont <- poly2nb(fonds_epci_cont)
+```
+
+Le message d'erreur prévient qu'un territoire est détaché de l'autre, la Corse :
+
+```{r}
+composantes <- n.comp.nb(voisins_epci_cont)
+fonds_epci_cont$composante <- composantes$comp.id
+fonds_epci_cont[fonds_epci_cont$composante == 2, c("NOM", "DEP", "REG")]
+```
+
+Création de la liste de poids.
+
+```{r}
+ponderation_epci_cont <- nb2listw(voisins_epci_cont, zero.policy = TRUE)
+```
+
+Vérification que la somme des pondérations associées à chaque pondération est égale à 1.
+
+```{r}
+all(sapply(ponderation_epci_cont$weights, sum) == 1)
+```
+
+```{r}
+# On centre et normalise le taux de pauvreté
+fonds_epci_cont <- fonds_epci_cont %>%
+  mutate(TX_PAUV_STD = scale(TX_PAUV))
+
+# Vérification que le centrage et la normalisation ont bien été effectués
+mean(fonds_epci_cont$TX_PAUV_STD)
+sd(fonds_epci_cont$TX_PAUV_STD)
+```
+
+```{r}
+moran.plot(
+  as.numeric(fonds_epci_cont$TX_PAUV_STD),
+  listw = ponderation_epci_cont,
+  xlab = "Taux de pauvreté par EPCI",
+  ylab = "Moyenne du taux de pauvreté des voisins",
+  main = "Diagramme de Moran du taux de pauvreté par EPCI"
+)
+```
+
+```{r}
+moran.test(fonds_epci_cont$TX_PAUV_STD, ponderation_epci_cont, randomisation = TRUE)
+```
+
+Le I de Moran vaut 0.45, une valeur comprise entre 0 et 1, signe d'autocorrélation spatiale positive. De plus, la la p-valeur du test est très faible, conduisant à rejeter l'hypothèse nulle selon laquelle le I de Moran est nul. On confirme que l'autocorrélation spatiale du taux de pauvreté est positive.
+
+Plus spécifiquement, on peut également regarder les LISA, qui sont des sortes de I de Moran locaux.
+
+```{r}
+tx_pauv_lisa <- spdep::localmoran(fonds_epci_cont$TX_PAUV,
+                                  ponderation_epci_cont, zero.policy = TRUE)
+mean(tx_pauv_lisa[,"Ii"])
+round(prop.table(table(tx_pauv_lisa[,"Ii"] < 0)) * 100, 1)
+```
+
+La moyenne des LISA est bien égale au I de Moran global.
+
+76 % des circonscriptions ont un I de Moran local positif.
+
+```{r}
+fonds_epci_cont <- fonds_epci_cont %>%
+  mutate(LISA_PVAL = tx_pauv_lisa[, "Pr(z != E(Ii))"])
+
+round(prop.table(table(fonds_epci_cont$LISA_PVAL < 0.05)) * 100, 1)
+```
+
+Seulement 25 % des circonscriptions ont un LISA avec une p-value < 0.05, sans tenir compte du problème de la multiplicité des tests.
+
+```{r}
+moy <- mean(fonds_epci_cont$TX_PAUV)
+lag_val <- lag.listw(ponderation_epci_cont, fonds_epci_cont$TX_PAUV)
+p_val   <- tx_pauv_lisa[, "Pr(z != E(Ii))"]
+
+fonds_epci_cont <- fonds_epci_cont %>%
+  mutate(
+    quadrant = case_when(
+      TX_PAUV > moy & lag_val > moy & p_val < 0.05 ~ "HH",
+      TX_PAUV < moy & lag_val < moy & p_val < 0.05 ~ "LL",
+      TX_PAUV > moy & lag_val < moy & p_val < 0.05 ~ "HL",
+      TX_PAUV < moy & lag_val > moy & p_val < 0.05 ~ "LH",
+      TRUE ~ "NS"
+    ),
+    quadrant = factor(quadrant, levels = c("HH", "HL", "LH", "LL", "NS"))
+  )
+
+pal_lisa <- c("HH" = "#d7191c", "HL" = "#fdae61",
+              "LH" = "#abd9e9", "LL" = "#2c7bb6", "NS" = "grey85")
+
+plot(fonds_epci_cont["quadrant"],
+     pal = pal_lisa,
+     main = "Clusters LISA – Taux de pauvreté")
+```
+
+Cinq clusters à forte autocorrélation spatiale positive se distinguent.
