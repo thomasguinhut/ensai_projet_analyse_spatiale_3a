@@ -8,7 +8,7 @@ output: html_document
 ```{r, message=FALSE}
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
                      "classInt", "rnaturalearth", "rnaturalearthdata",
-                     "remotes", "spdep")
+                     "remotes", "spdep", "car")
 
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
@@ -127,7 +127,7 @@ moran.test(fonds_epci_cont$TX_PAUV_STD, ponderation_epci_cont, randomisation = T
 
 Le I de Moran vaut 0.45, une valeur comprise entre 0 et 1, signe d'autocorrélation spatiale positive. De plus, la la p-valeur du test est très faible, conduisant à rejeter l'hypothèse nulle selon laquelle le I de Moran est nul. On confirme que l'autocorrélation spatiale du taux de pauvreté est positive.
 
-Plus spécifiquement, on peut également regarder les LISA, qui sont des sortes de I de Moran locaux.
+Plus spécifiquement, on peut également regarder les LISA, qu'on peut considérer comme des I de Moran locaux.
 
 ```{r}
 tx_pauv_lisa <- spdep::localmoran(fonds_epci_cont$TX_PAUV,
@@ -175,3 +175,140 @@ plot(fonds_epci_cont["quadrant"],
 ```
 
 Cinq clusters à forte autocorrélation spatiale positive se distinguent.
+
+
+# Modélisation du taux de pauvreté 
+
+L’analyse exploratoire spatiale a mis en évidence une autocorrélation spatiale significative du taux de pauvreté, ce qui suggère que des territoires voisins présentent des niveaux de pauvreté proches.
+
+Toutefois, il est possible d'aller au-delà de cette analyse descriptive en identifiant les facteurs explicatifs de ces disparités. Nous modélisons donc le taux de pauvreté en fonction de caractéristiques socio-économiques observables.
+
+## Modèle linéaire classique
+
+Pour construire le modèle, une approche mixte d’Elhorst est adoptée. Un modèle linéaire classique est d'abord estimé. Il servira de référence afin d'introduire par la suite la dépendance spatiale dans la modélisation.
+
+```{r}
+modele_mco_1 <- lm(
+  TX_PAUV ~ . - ID - ID_NAME - DEP - REG,
+  data = epci
+)
+
+summary(modele_mco_1)
+```
+```{r}
+# vif(modele_mco_1)
+```
+
+
+Certaines variables ne semblent pas significatives et le modèle semble saturé. Le message d'erreur du VIF indique que certaines variables sont parfaitement colinéaires. On peut par exemple penser aux variables PART_SALAIRES, PART_PREST_SOC, PART_PATRIMOINE qui somment presque à 100%. C'est pour cela que deux d'entre elles ne sont pas estimées par le modèle. Elles montrent une colinéarité parfaite. De plus, le R2 est étonnamment très élevé, indiquant un potentiel sur-ajustement. Enfin, certains coefficients ne semblent pas tout à fait cohérents, comme celui de la part de familles monoparentales (négatif et significatif, ce qui semble contre-intuitif). 
+
+
+On crée un nouveau modèle, plus parcimonieux, avec moins de variables.
+
+```{r}
+modele_mco_2 <- lm(
+  TX_PAUV ~ 
+    PART_CHOMAGE_REV_2021 +
+    MED_NIV_VIE_2021 +
+    PART_MONOPAR_2022 +
+    PART_NON_DIPLOME_2022 +
+    RATIO_DECILE_9_1_2021,
+  data = fonds_epci_cont
+)
+
+summary(modele_mco_2)
+```
+Toutes les variables sont significatives. Cette fois-ci, le modèle semble être de plutôt bonne qualité, sans sur-ajustement. Les signes des coefficients sont cohérents.
+
+```{r}
+vif(modele_mco_2)
+```
+
+Les VIF sont compris entre 1.3 et 2.3, ce qui ne semble pas indiquer de multi-colinéarité. ce modèle peut donc servir de base pour la suite de l'analyse. Il est difficile d'établir des conclusions à cette étape de la modélisation, car l'autocorrélation spatiale n'est pas prise en compte. En effet, l'analyse descriptive montre qu'il existe une forte autocorrélation spatiale. Ainsi, les hypothèses traditionnelles des MCO, telles que l'indépendance des observations, ne sont pas respectées, il est donc impératif de réaliser une modélisation spatiale.
+
+On teste tout d'abord la dépendance dans la variable dépendante (le taux de pauvreté) et dans les erreurs.
+
+```{r}
+lm_tests <- lm.RStests(modele_mco_2, ponderation_epci_cont, test = "all")
+lm_tests
+```
+
+Tout est significatif. La structure spatiale est donc essentielle pour modéliser le taux de pauvreté (LMerr et LSlag largement significatifs). 
+
+
+## Modèle spatial de Durbin (SDM)
+
+On met d'abord en place un modèle spatial de Durbin (SDM), comme précaunisé par Elhorst. Il s'agit du modèle le plus robuste.
+
+```{r}
+library(spatialreg)
+
+# SDM
+modele_sdm <- lagsarlm(
+  TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 +
+    PART_MONOPAR_2022 + PART_NON_DIPLOME_2022 + RATIO_DECILE_9_1_2021,
+  data = fonds_epci_cont,
+  listw = ponderation_epci_cont,
+  type = "mixed",  # SDM
+  method = "eigen"
+)
+
+summary(modele_sdm)
+```
+
+Le modèle de Durbin est particulièrement riche. En effet, la valeur de rho est élevée et significative, ce qui confirme que l'autocorrélation spatiale du taux de pauvreté est forte. Les coefficients directs sont très significatifs, ils peuvent être interprétés. Le coefficient de MED_NIV_VIE_2021 indique que plus le niveau de vie médian est localement élevé, plus le taux de pauvreté baisse, ce qui semble tout-à-fait cohérent. A l'inverse, plus il y a de chômage localement, plus la pauvreté est grande. Il en est de même pour RATIO_DECILE_9_1_2021. Les inégalités internes entre les personnes aisées et modestes semblent être liées à la pauvreté. Le constat est similaire pour la part de famille monoparentale ou de personnes non diplômées.
+
+Le modèle de Durbin semble totalement pertinent. Son AIC est plus faible que celui du modèle linéaire classique. Plus particulièrement, les effets de voisinnage, qu'on retrouve dans les variables "lag.", sont généralement significatifs. Pour pouvoir mieux les interpréter, on étudie les effets directs, indirects et totaux.
+
+
+```{r}
+impacts_sdm <- impacts(modele_sdm, listw = ponderation_epci_cont, R = 500)
+
+summary(impacts_sdm, zstats = TRUE, short = TRUE)
+```
+L'analyse des effets directs et indirects permettent de mettre en évidence plusieurs phénomènes. Tout d'abord, le niveau de vie médian a un effet direct et indirect négatif et significatif sur le taux de pauvreté. Ainsi, plus le niveau de vie augmente dans un EPCI ou chez ses voisins, plus la pauvreté baisse. L'effet total est naturellement négatif. C'est l'inverse pour le ratio entre le neuvième et le premier décile. Les inégalités motivent fortement la pauvreté, à la fois pour l'EPCI concerné et ses voisins. L'effet total est positif et significatif.
+
+En revanche, le cas du chômage est plus paradoxal. En effet, le chômage a un effet direct positif fort sur le taux de pauvreté. Donc plus il y a de chômage dans un EPCI, plus la pauvreté augmente. Cependant, il a également un effet indirect plutôt significatif et négatif sur la pauvreté. Cela peut s'apparenter à un effet de polarisation du chômage et de la pauvreté. Si le chômage augmente dans un EPCI, ses voisins auront tendance à connaître moins de pauvreté. L'effet total annule ces deux effets, il ne semble pas significatif. La situation est exactement la même pour la part de personnes non diplômées : l'effet total s'annule.
+
+Enfin, la part de famille monoparentales semble être un phénomène particulièrement local. Cette variable a un effet direct positif et fort sur le taux de pauvreté. Par contre, elle n'a pas d'effet indirect sur ce dernier, comme l'indique la p-value correspondante (0.36). Ainsi, la part de familles monoparentales dans un EPCI n'influence pas le taux de pauvreté des EPCI voisins, mais uniquement de celui-ci. Il s'agit d'un phénomène concentré au sein d'un territoire, qui ne se diffuse pas aux territoires voisins.
+
+
+## Modèle spatial de Durbin avec erreur spatiale (SDEM)
+
+Il convient de noter que le dernier test réalisé sur le modèle de Durbin indique qu'il reste de l'autocorrélation résiduelle (coefficient élevé et significatif). Il pourrait être alors intéressant d'étudier un modèle d'erreur spatiale (SDEM), d'autant plus que le Robust LM Error est plus élevé que le Robust LM Lag dans les tests sur le modèle MCO.
+
+```{r}
+modele_sdem <- errorsarlm(TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 + 
+    PART_MONOPAR_2022 + PART_NON_DIPLOME_2022 + RATIO_DECILE_9_1_2021, 
+    data = fonds_epci_cont, listw = ponderation_epci_cont, Durbin = TRUE)
+
+summary(modele_sdem)
+```
+Le modèle SDEM est légèrement moins bon que le modèle SDM. En effet, son AIC est plus élevé, et la log-vraisemblance également. Il est donc pertinent de conserver le SDM comme modèle final. Ceci indique que la pauvreté est un phénomène qui se diffuse plus globalement, ce que le SDM capte mieux. En revanche, le SDEM est intéressant, car il confirme la stabilité du modèle. On peut noter que les coefficients directs sont similaires à ceux du SDM. Le lag du ratio D9/D1 est là-aussi très élevé, contrairement à la monoparentalité, ce qui correspond aux conclusions précédentes.
+
+## Choix du modèle final
+
+Avant de conclure sur un modèle final, on peut vérifier qu'un modèle plus simple ne serait pas adapter. Par exemple, le modèle SEM pourrait être suffisant puisqu'on constate de l'autocorrélation spatiale résiduelle. On peut alors comparer les deux modèles.
+
+```{r}
+modele_sem <- errorsarlm(TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 + 
+    PART_MONOPAR_2022 + PART_NON_DIPLOME_2022 + RATIO_DECILE_9_1_2021, 
+    data = fonds_epci_cont, listw = ponderation_epci_cont)
+
+anova(modele_sdm, modele_sem)
+```
+
+
+Le modèle SDM est nettement meilleur que le modèle SEM. La statistique de test est élevée et la p-value particulièrement faible : on rejette l'hypothèse nulle selon laquelle le SEM est suffisant. Ainsi, les prédicteurs sont spatialement dépendants et les variables sont spatialement décalées. Le simple terme d'erreur spatiale du SEM ne peut pas capter toute cette information.
+
+Semi-conclusion de gemini : "L'analyse de la dépendance spatiale du taux de pauvreté a été conduite en comparant plusieurs spécifications. Bien que les tests de Lagrange (LM) suggéraient initialement une structure d'erreur (SEM), la comparaison des modèles par le critère d'Akaike (AIC) et le test de rapport de vraisemblance (LR Test) montre la supériorité du Spatial Durbin Model (SDM). Ce dernier présente un AIC de 4054,3, significativement plus bas que celui du SEM (4095,8) et du SDEM (4065,1). Le test de rapport de vraisemblance confirme que l'inclusion des variables explicatives spatialement décalées ($WX$) améliore significativement la qualité de l'ajustement ($p < 0.001$). Le SDM est donc le modèle le plus performant pour capturer à la fois les effets directs et les dynamiques de débordement entre les EPCI."
+
+Bien penser à résumer les biais !! et aux critiques des méthodes
+
+un peu d'interprétation causale ?
+
+
+Conclusion : répondre aux trois questions
+penser également à faire l'introduction en présentant le taux de pauvreté.
+
+
