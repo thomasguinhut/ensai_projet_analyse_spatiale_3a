@@ -41,6 +41,7 @@ plot_epci()
 plot_epci(var = "PART_BAC5PLUS_2022")
 plot_epci(var = "PART_CHOMAGE_REV_2021")
 ```
+Il convient de noter que les Iris ne concernent que les grandes villes, et donc ne permettent pas d'avoir des informations sur le taux de pauvreté sur l'ensemble du territoire. La carte à l'échelle des Iris est donc majoritairement blanche, signifiant qu'il n'y a pas d'information pour le territoire concerné.
 
 # Analyses statistiques
 
@@ -57,7 +58,7 @@ fonds_epci <- fonds_epci %>%
   left_join(epci, by = c("CODE_SIREN" = "ID"))
 ```
 
-Construction de la matrice des voisins.
+Construction de la matrice des voisins. On choisit ici la contiguïté Queen car nous considérons la pauvreté comme un phénomène socio-économique diffus, qui ne s'arrête pas nettement aux frontières. Ainsi, prendre en compte l'ensemble des territoires adjacents dans l'analyse, même ceux qui le sont très peu, peut permettre de mieux décricre la pauvreté comme phénomène spatial. Une alternative aurait été la contiguïté Rook, qui aurait pu conduire à une analyse plus fragmentée, ou encore l'utilisation des k plus proches voisins, qui semble plus complexe, notamment dans le choix du seuil k. 
 
 ```{r}
 voisins_epci <- poly2nb(fonds_epci) # par défaut : queen = TRUE
@@ -70,7 +71,7 @@ sans_voisins <- which(card(voisins_epci) == 0)
 fonds_epci[sans_voisins, "NOM"]
 ```
 
-Ce problème concerne des îles, nous les retirons
+Ce problème concerne des îles, nous les retirons.
 
 ```{r}
 fonds_epci_cont <- fonds_epci[-sans_voisins, ]
