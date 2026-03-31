@@ -8,7 +8,7 @@ output: html_document
 ```{r, message=FALSE}
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
                      "classInt", "rnaturalearth", "rnaturalearthdata",
-                     "remotes", "spdep", "car")
+                     "remotes", "spdep", "car", "spatialreg")
 
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
@@ -241,8 +241,6 @@ Tout est significatif. La structure spatiale est donc essentielle pour modélise
 On met d'abord en place un modèle spatial de Durbin (SDM), comme précaunisé par Elhorst. Il s'agit du modèle le plus robuste.
 
 ```{r}
-library(spatialreg)
-
 # SDM
 modele_sdm <- lagsarlm(
   TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 +
