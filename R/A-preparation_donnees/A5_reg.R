@@ -36,7 +36,7 @@ reg_3 <- reg_2 %>%
 glimpse(reg_3)
 
 reg_4 <- reg_3 %>% 
-  filter(!(ID %in% c("01", "02", "03", "04", "06")))
+  filter(!(ID %in% c("01", "02", "03", "04", "06", "94")))
 
 table(reg_4$TX_PAUV, useNA = "always")
 

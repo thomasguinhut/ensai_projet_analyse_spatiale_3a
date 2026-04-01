@@ -1,5 +1,0 @@
-source("R/B-cartes/B1-dep.R")
-source("R/B-cartes/B2-reg.R")
-source("R/B-cartes/B3-epci.R")
-source("R/B-cartes/B4-carreaux.R")
-source("R/B-cartes/B5-iris.R")
