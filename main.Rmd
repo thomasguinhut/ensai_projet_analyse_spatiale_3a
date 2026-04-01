@@ -18,7 +18,7 @@ Le taux de pauvreté est défini comme la part d'individus étant en situation d
 
 La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment l'importance du diplôme, des revenus et de la composition des ménages sur la pauvreté. Lorsqu'on l'on utilise des données spatiales, il est toutefois nécessaire de tenir compte de la présence d'autocorrélation avant toute modélisation par des régressions.
 
-Nous souhaitons donc dans un premier temps vérifier la présence d'autocorrélation spatiale pour le taux de pauvreté en France. Notons que cette autocorrélation est ici attendue : la pauvreté est un phénomène socio-économique qui ne limite pas à des frontières administratives. Une forte autocorrélation spatiale est même recherchée en allant au niveau le plus fin possible afin de limiter l'effet MAUP (Modifiable Areal Unit Problem) dans notre analyse. Cet effet désigne le fait que les résultats d'une analyse spatiale peuvent varier selon le découpage géographique retenu : un même phénomène observé à l'échelle des régions, des départements ou des EPCI peut produire des conclusions statistiques différentes, voire contradictoires du fait de l'étendue géographique variable sur laquelle la moyenne d'un indicateur donné est calculée.
+Nous souhaitons donc dans un premier temps vérifier la présence d'autocorrélation spatiale pour le taux de pauvreté en France. Notons que cette autocorrélation est ici attendue : la pauvreté est un phénomène socio-économique qui ne se limite pas à des frontières administratives. Une forte autocorrélation spatiale est même recherchée en allant au niveau le plus fin possible afin de limiter l'effet MAUP (Modifiable Areal Unit Problem) dans notre analyse. Cet effet désigne le fait que les résultats d'une analyse spatiale peuvent varier selon le découpage géographique retenu : un même phénomène observé à l'échelle des régions, des départements ou des EPCI peut produire des conclusions statistiques différentes, voire contradictoires du fait de l'étendue géographique variable sur laquelle la moyenne d'un indicateur donné est calculée.
 
 Dans un second temmps,
 
@@ -410,7 +410,7 @@ fonds_epci <- fonds_epci %>%
   left_join(epci, by = c("CODE_SIREN" = "ID"))
 ```
 
-Construction de la matrice des voisins. On choisit ici la contiguïté Queen car nous considérons la pauvreté comme un phénomène socio-économique diffus, qui ne s'arrête pas nettement aux frontières. Ainsi, prendre en compte l'ensemble des territoires adjacents dans l'analyse, même ceux qui le sont très peu, peut permettre de mieux décricre la pauvreté comme phénomène spatial. Une alternative aurait été la contiguïté Rook, qui aurait pu conduire à une analyse plus fragmentée, ou encore l'utilisation des k plus proches voisins, qui semble plus complexe, notamment dans le choix du seuil k. 
+Construction de la matrice des voisins. On choisit ici la contiguïté Queen car nous considérons la pauvreté comme un phénomène socio-économique diffus, qui ne s'arrête pas nettement aux frontières. Ainsi, prendre en compte l'ensemble des territoires adjacents dans l'analyse, même ceux qui le sont très peu, peut permettre de mieux décrire la pauvreté comme phénomène spatial. Une alternative aurait été la contiguïté Rook, qui aurait pu conduire à une analyse plus fragmentée, ou encore l'utilisation des k plus proches voisins, qui semble plus complexe, notamment dans le choix du seuil k. 
 
 ```{r}
 voisins_epci <- poly2nb(fonds_epci) # par défaut : queen = TRUE
@@ -662,7 +662,7 @@ Toutes les variables sont significatives. Cette fois-ci, le modèle semble être
 vif(modele_mco_2)
 ```
 
-Les VIF sont compris entre 1.3 et 2.3, ce qui ne semble pas indiquer de multi-colinéarité. ce modèle peut donc servir de base pour la suite de l'analyse. Il est difficile d'établir des conclusions à cette étape de la modélisation, car l'autocorrélation spatiale n'est pas prise en compte. En effet, l'analyse descriptive montre qu'il existe une forte autocorrélation spatiale. Ainsi, les hypothèses traditionnelles des MCO, telles que l'indépendance des observations, ne sont pas respectées, il est donc impératif de réaliser une modélisation spatiale.
+Les VIF sont compris entre 1.3 et 2.3, ce qui ne semble pas indiquer de multi-colinéarité. Ce modèle peut donc servir de base pour la suite de l'analyse. Il est difficile d'établir des conclusions à cette étape de la modélisation, car l'autocorrélation spatiale n'est pas prise en compte. En effet, l'analyse descriptive montre qu'il existe une forte autocorrélation spatiale. Ainsi, les hypothèses traditionnelles des MCO, telles que l'indépendance des observations, ne sont pas respectées. Il est donc impératif de réaliser une modélisation spatiale.
 
 On teste tout d'abord la dépendance dans la variable dépendante (le taux de pauvreté) et dans les erreurs.
 
@@ -692,7 +692,7 @@ modele_sdm <- lagsarlm(
 summary(modele_sdm)
 ```
 
-Le modèle de Durbin est particulièrement riche. En effet, la valeur de rho est élevée et significative, ce qui confirme que l'autocorrélation spatiale du taux de pauvreté est forte. Les coefficients directs sont très significatifs, ils peuvent être interprétés. Le coefficient de MED_NIV_VIE_2021 indique que plus le niveau de vie médian est localement élevé, plus le taux de pauvreté baisse, ce qui semble tout-à-fait cohérent. A l'inverse, plus il y a de chômage localement, plus la pauvreté est grande. Il en est de même pour RATIO_DECILE_9_1_2021. Les inégalités internes entre les personnes aisées et modestes semblent être liées à la pauvreté. Le constat est similaire pour la part de famille monoparentale ou de personnes non diplômées.
+Le modèle de Durbin est particulièrement riche. En effet, la valeur de rho est élevée et significative, ce qui confirme que l'autocorrélation spatiale du taux de pauvreté est forte. Les coefficients directs sont très significatifs, ils peuvent être interprétés. Le coefficient de MED_NIV_VIE_2021 indique que plus le niveau de vie médian est localement élevé, plus le taux de pauvreté baisse, ce qui semble tout-à-fait cohérent. A l'inverse, plus il y a de chômage localement, plus la pauvreté est grande. Il en est de même pour RATIO_DECILE_9_1_2021. Les inégalités internes entre les personnes aisées et modestes semblent être liées à la pauvreté. Le constat est similaire pour la part de familles monoparentales ou de personnes non diplômées.
 
 Le modèle de Durbin semble totalement pertinent. Son AIC est plus faible que celui du modèle linéaire classique. Plus particulièrement, les effets de voisinnage, qu'on retrouve dans les variables "lag.", sont généralement significatifs. Pour pouvoir mieux les interpréter, on étudie les effets directs, indirects et totaux.
 
@@ -706,12 +706,12 @@ L'analyse des effets directs et indirects permettent de mettre en évidence plus
 
 En revanche, le cas du chômage est plus paradoxal. En effet, le chômage a un effet direct positif fort sur le taux de pauvreté. Donc plus il y a de chômage dans un EPCI, plus la pauvreté augmente. Cependant, il a également un effet indirect plutôt significatif et négatif sur la pauvreté. Cela peut s'apparenter à un effet de polarisation du chômage et de la pauvreté. Si le chômage augmente dans un EPCI, ses voisins auront tendance à connaître moins de pauvreté. L'effet total annule ces deux effets, il ne semble pas significatif. La situation est exactement la même pour la part de personnes non diplômées : l'effet total s'annule.
 
-Enfin, la part de famille monoparentales semble être un phénomène particulièrement local. Cette variable a un effet direct positif et fort sur le taux de pauvreté. Par contre, elle n'a pas d'effet indirect sur ce dernier, comme l'indique la p-value correspondante (0.36). Ainsi, la part de familles monoparentales dans un EPCI n'influence pas le taux de pauvreté des EPCI voisins, mais uniquement de celui-ci. Il s'agit d'un phénomène concentré au sein d'un territoire, qui ne se diffuse pas aux territoires voisins.
+Enfin, la part de famille monoparentales semble être un phénomène particulièrement local. Cette variable a un effet direct positif et fort sur le taux de pauvreté. Par contre, elle n'a pas d'effet indirect sur ce dernier, comme l'indique la p-valeur correspondante (0.36). Ainsi, la part de familles monoparentales dans un EPCI n'influence pas le taux de pauvreté des EPCI voisins, mais uniquement de celui-ci. Il s'agit d'un phénomène concentré au sein d'un territoire, qui ne se diffuse pas aux territoires voisins.
 
 
 ## Modèle spatial de Durbin avec erreur spatiale (SDEM)
 
-Il convient de noter que le dernier test réalisé sur le modèle de Durbin indique qu'il reste de l'autocorrélation résiduelle (coefficient élevé et significatif). Il pourrait être alors intéressant d'étudier un modèle d'erreur spatiale (SDEM), d'autant plus que le Robust LM Error est plus élevé que le Robust LM Lag dans les tests sur le modèle MCO.
+Il convient de noter que le dernier test réalisé sur le modèle de Durbin indique qu'il reste de l'autocorrélation résiduelle (coefficient élevé et significatif). Il pourrait être alors intéressant d'étudier un modèle d'erreur spatiale comme SDEM, d'autant plus que le Robust LM Error est plus élevé que le Robust LM Lag dans les tests sur le modèle MCO.
 
 ```{r}
 modele_sdem <- errorsarlm(TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 + 
@@ -720,11 +720,12 @@ modele_sdem <- errorsarlm(TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 +
 
 summary(modele_sdem)
 ```
+
 Le modèle SDEM est légèrement moins bon que le modèle SDM. En effet, son AIC est plus élevé, et la log-vraisemblance également. Il est donc pertinent de conserver le SDM comme modèle final. Ceci indique que la pauvreté est un phénomène qui se diffuse plus globalement, ce que le SDM capte mieux. En revanche, le SDEM est intéressant, car il confirme la stabilité du modèle. On peut noter que les coefficients directs sont similaires à ceux du SDM. Le lag du ratio D9/D1 est là-aussi très élevé, contrairement à la monoparentalité, ce qui correspond aux conclusions précédentes.
 
 ## Choix du modèle final
 
-Avant de conclure sur un modèle final, on peut vérifier qu'un modèle plus simple ne serait pas adapter. Par exemple, le modèle SEM pourrait être suffisant puisqu'on constate de l'autocorrélation spatiale résiduelle. On peut alors comparer les deux modèles.
+Avant de conclure sur un modèle final, on peut vérifier qu'un modèle plus simple ne serait pas adapté. Par exemple, le modèle SEM pourrait être suffisant puisqu'on constate de l'autocorrélation spatiale résiduelle. On peut alors comparer les deux modèles.
 
 ```{r}
 modele_sem <- errorsarlm(TX_PAUV ~ PART_CHOMAGE_REV_2021 + MED_NIV_VIE_2021 + 
@@ -735,16 +736,33 @@ anova(modele_sdm, modele_sem)
 ```
 
 
-Le modèle SDM est nettement meilleur que le modèle SEM. La statistique de test est élevée et la p-value particulièrement faible : on rejette l'hypothèse nulle selon laquelle le SEM est suffisant. Ainsi, les prédicteurs sont spatialement dépendants et les variables sont spatialement décalées. Le simple terme d'erreur spatiale du SEM ne peut pas capter toute cette information.
+Le modèle SDM est nettement meilleur que le modèle SEM. La statistique de test est élevée et la p-valeur particulièrement faible : on rejette l'hypothèse nulle selon laquelle le SEM est suffisant. Ainsi, les prédicteurs sont spatialement dépendants et les variables sont spatialement décalées. Le simple terme d'erreur spatiale du SEM ne peut pas capter toute cette information.
+
+
+## Biais et limites de l'analyse
+
+Plusieurs critiques peuvent être émises quant à la modélisation retenue. Tout d'abord, celle-ci repose sur le choix de la matrice de cointiguïté et sur l'échelle géographique retenue. La pauvreté étant un phénomène diffus, elle ne s'arrête pas aux frontières des EPCI. L'idéal serait de comparer plusieurs échelles géographiques (comme les départements) et plusieurs définitions du voisinnage (comme les k plus proches voisins). La modélisation peut également faire face à un problème de simultanéité, certaines variables non observées peuvent influencer la pauvreté dans tout un voisinnage. On peut penser à une politique régionale spécifique.
+
+De plus, il est difficile d'établir des relations de causales à partir des corrélations spatiales. Certains effets indirects, comme celui du chômage, sont difficilement analysables. Ils pourraient cacher des corrélations falacieuses ou des effets indirects complexes. Au-delà des problèmes d'endogénéité ou de variables omises, le fait que l'étude soit réalisée à partir d'une seule année empêche l'identification d'une potentielle causalité. La pauvreté étant un processus long, il aurait été intéressant d'étudier un modèle de données de panel. 
+
+Enfin, la modélisation peut faire face à des problèmes d'hétérogénéité spatiale. Le lien entre les différentes variables peut être différent d'une région à une autre. Une extension de l'étude serait la mise en place d'un modèle plus complexe, prenant en compte cette potentielle hétérogénéité.
+
 
 Semi-conclusion de gemini : "L'analyse de la dépendance spatiale du taux de pauvreté a été conduite en comparant plusieurs spécifications. Bien que les tests de Lagrange (LM) suggéraient initialement une structure d'erreur (SEM), la comparaison des modèles par le critère d'Akaike (AIC) et le test de rapport de vraisemblance (LR Test) montre la supériorité du Spatial Durbin Model (SDM). Ce dernier présente un AIC de 4054,3, significativement plus bas que celui du SEM (4095,8) et du SDEM (4065,1). Le test de rapport de vraisemblance confirme que l'inclusion des variables explicatives spatialement décalées ($WX$) améliore significativement la qualité de l'ajustement ($p < 0.001$). Le SDM est donc le modèle le plus performant pour capturer à la fois les effets directs et les dynamiques de débordement entre les EPCI."
 
-Bien penser à résumer les biais !! et aux critiques des méthodes
 
-un peu d'interprétation causale ?
+# Conclusion
 
+Cette étude a permis de mettre en lumière la complexité spatiale de la pauvreté en France métropolitaine à l'échelle des EPCI. En passant d'une analyse purement descriptive à une modélisation économétrique avancée, nous avons pu décomposer les mécanismes qui régissent la précarité territoriale.
 
-Conclusion : répondre aux trois questions
-penser également à faire l'introduction en présentant le taux de pauvreté.
+Tout d'abord, l'analyse visuelle cartographique du taux de pauvreté à plusieurs échelles permet de constater que la pauvreté est régie par une forte autocorrélation spatiale en France, quelque soit l'échelle géographique retenue. Celle-ci est ensuite formalisée à travers le calcul de I de Moran... à finir
 
+Pour modéliser le taux de pauvreté et la dépendance spatiale, un modèle SDM est retenu (AIC de 4054,3). Le choix de ce modèle a été validé par une démarche mixte (approche d'Elhorst). L'utilisation des tests de rapport de vraisemblance (Anova) a démontré que le SDM était statistiquement supérieur aux modèles plus simples comme la régression linéaire classique ou encore le SEM ($p < 0,001$). Cela prouve que pour comprendre la pauvreté, il ne suffit pas de traiter l'espace comme un simple "bruit" dans l'erreur (modèle SEM), mais qu'il faut intégrer explicitement les caractéristiques des voisins dans l'explication (les variables "lag").
 
+L'analyse des impacts du Spatial Durbin Model (SDM) nous permet de répondre aux trois dimensions du problème :
+
+Un effet de composition indéniable : La pauvreté locale reste fortement ancrée dans les caractéristiques socio-économiques des habitants. L’absence de diplôme, la part de familles monoparentales et le chômage local sont des moteurs directs et systématiques de la précarité au sein d'un EPCI.
+
+Une hétérogénéité structurelle marquée : Le facteur le plus pesant de notre modèle reste les inégalités internes de revenus (Ratio D9/D1). Avec un impact total de 6,82, il apparaît que la pauvreté n'est pas seulement un manque de ressources absolu, mais le résultat d'une structure de distribution des richesses très inégalitaire qui "produit" de la précarité, tant localement que par débordement sur les voisins.Une dépendance spatiale significative : Le paramètre Rho (0,50) confirme que la pauvreté n'est pas un isolat statistique. Elle se diffuse par "contagion" spatiale. Toutefois, cette diffusion n'est pas uniforme. Le niveau de vie et les inégalités agissent de manière globale (effets indirects significatifs, propagation). On trouve également une certaine concentration. Le chômage et le faible niveau de diplôme semblent suivre une logique de polarisation. L'effet indirect négatif suggère que ces populations se concentrent dans certains pôles, créant des disparités marquées avec leurs voisins immédiats.
+
+En somme, l'étude démontre que la pauvreté en France n'est pas un phénomène isolé spatialement mais une dynamique profondément ancrée dans l'espace intercommunal. Si les caractéristiques propres à chaque territoire expliquent une large part de la précarité, l'influence des voisins et le poids des inégalités de revenus structurent véritablement la géographie de la vulnérabilité. Il serait possible d'étendre l'étude, notamment par la considération de plusieurs années et de données de panel, ou encore en construisant un modèle plus complexe pouvant permettre d'établir de véritables relations de causalité.
