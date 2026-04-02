@@ -14,7 +14,7 @@ output:
 
 Nous proposons d'étudier la pauvreté en utilisant les données à différentes échelles géographiques fournies par l'Insee.
 
-Le taux de pauvreté est défini comme la part d'individus étant en situation de pauvreté monétaire, un seuil fixé en France à 60 % du niveau de vie médian  pour une année donnée. Le calcul de ce taux nécessite donc des informations précises sur les revenus des ménages. Pour des questions méthodologiques, l'Insee ne donne la pauvreté de façon exhaustive à une échelle géographique donnée que jusqu'aux intercommunalités, les EPCI. A l'échelle des communes, le taux est donné pour certaines mais il ne l'est pas pour toutes.
+Le taux de pauvreté est défini comme la part d'individus étant en situation de pauvreté monétaire, un seuil fixé en France à 60 % du niveau de vie médian pour une année donnée. Le calcul de ce taux nécessite donc des informations précises sur les revenus des ménages. Pour des questions méthodologiques, l'Insee ne donne le taux de pauvreté de façon exhaustive à une échelle géographique donnée que jusqu'aux intercommunalités, les EPCI. A l'échelle des communes, le taux est donné pour certaines mais il ne l'est pas pour toutes.
 
 La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment l'importance du diplôme, des revenus et de la composition des ménages sur la pauvreté. Lorsqu'on l'on utilise des données spatiales, il est toutefois nécessaire de tenir compte de la présence d'autocorrélation avant toute modélisation par des régressions.
 
@@ -24,7 +24,7 @@ Dans un second temmps,
 
 # Installation des packages
 
-```{r, echo=FALSE}
+```{r, message=FALSE}
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
                      "classInt", "rnaturalearth", "rnaturalearthdata",
                      "remotes", "spdep", "car", "spatialreg")
