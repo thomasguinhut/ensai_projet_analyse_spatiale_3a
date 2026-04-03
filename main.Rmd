@@ -16,7 +16,7 @@ Nous avons choisi le sujet n°2 sur les disparités économiques. Plus précisé
 
 Le principal indicateur statistique de la pauvreté est le taux de pauvreté, défini comme la part d'individus étant en situation de pauvreté monétaire, un seuil fixé dans l'Union européenne à 60 % du niveau de vie médian pour une année donnée. Le calcul de ce taux nécessite donc des informations précises sur les revenus des ménages. Pour des questions méthodologiques, l'Insee ne donne le taux de pauvreté de façon exhaustive à une échelle géographique donnée que jusqu'au niveau des intercommunalités, les EPCI (Établissement public de coopération intercommunale). A l'échelle des communes, le taux est par exemple donné pour certaines mais il ne l'est pas pour toutes.
 
-La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment le rôle du diplôme, des revenus et de la composition des ménages (voir [« Les facteurs qui protègent de la pauvreté n’aident pas forcément à s’en sortir », Simon Beck, Nathalie Missègue et Juliette Ponceau, in *Les revenus et le patrimoine des ménages*, édition 2014, Insee Références, Insee, 2014](https://www.insee.fr/fr/statistiques/1374589?sommaire=1374593)). Avant d'appliquer des régressions, il est toutefois nécessaire de tenir compte de la présence d'autocorrélations sur notre variable d'intérêt, étant en présence de données spatiales.
+La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment le rôle du diplôme, des revenus et de la composition des ménages (voir [« Les facteurs qui protègent de la pauvreté n’aident pas forcément à s’en sortir », Simon Beck, Nathalie Missègue et Juliette Ponceau, in *Les revenus et le patrimoine des ménages*, édition 2014, Insee Références, Insee, 2014](https://www.insee.fr/fr/statistiques/1374589?sommaire=1374593)). Avant de commencer la modélisation, il est toutefois nécessaire de tenir compte de la présence d'autocorrélations sur notre variable d'intérêt, étant en présence de données spatiales.
 
 Nous souhaitons donc dans un premier temps vérifier la présence de ces autocorrélations pour le taux de pauvreté en France. Notons que celles-ci sont ici attendues, voire même souhaitées. La pauvreté est un phénomène socio-économique qui ne se limite pas à des frontières administratives. De plus, une forte autocorrélation spatiale est recherchée pour aller au niveau le plus fin possible afin de limiter l'effet MAUP (Modifiable Areal Unit Problem) dans notre analyse. Cet effet désigne le fait que les résultats d'une analyse spatiale peuvent varier selon le découpage géographique retenu : un même phénomène observé à l'échelle des régions, des départements ou des EPCI peut produire des conclusions statistiques différentes, voire contradictoires, du fait de l'étendue géographique variable sur laquelle la moyenne d'un indicateur donné est calculée.
 
@@ -55,7 +55,7 @@ A l'échelle des EPCI, d'autres variables sont retenues : il s'agit en effet de 
 
 ## Importation
 
-Les bases de données propres et consolidées son stockées sur un cloud ; leur importation se fait comme suit directement en R.
+Les bases de données propres et consolidées sont stockées sur un cloud ; leur importation se fait comme suit directement en R.
 
 Il est possible de consuler les script R spécifiques à chaque base pour voir comment les données ont été nettoyées. Cela se fait sur le dépot GitHub de notre projet : <https://github.com/thomasguinhut/ensai_projet_analyse_spatiale_3a/tree/main/R/A-preparation_donnees>.
 
@@ -107,7 +107,7 @@ Nous ne gardons que les données de France métropolitaine pour ne pas rencontre
 
 La Corse est retirée pour l'échelle régionale du fait de l'absence de voisins à ce niveau d'analyse. Plusieurs EPCI, départements et carreaux sont sinon bien présents sur ce territoire déconnecté de la France continentale.
 
-Les fonds de carte sont tous exprimée dans le Code officiel géographique (COG) 2022. Cette édition a été retenue du fait que les données utilisées sont datées de 2021 et l'Insee exprime généralement les données d'une année N dans le COG de l'année N+1. 
+Les fonds de carte sont tous exprimés dans le Code officiel géographique (COG) 2022. Cette édition a été retenue du fait que les données utilisées sont datées de 2021 et l'Insee exprime généralement les données d'une année N dans le COG de l'année N+1. 
 
 ### EPCI
 
@@ -471,7 +471,7 @@ fonds_epci_cont <- fonds_epci[-sans_voisins, ]
 voisins_epci_cont <- poly2nb(fonds_epci_cont)
 ```
 
-Le message d'erreur prévient qu'un territoire est détaché de l'autre, la Corse :
+Le message d'avertissement prévient qu'un territoire est détaché de l'autre, la Corse :
 
 ```{r}
 composantes <- n.comp.nb(voisins_epci_cont)
@@ -697,13 +697,13 @@ moran.plot(
 moran.test(fonds_carreaux$TX_PAUV_STD, ponderation_carreaux, randomisation = TRUE)
 ```
 
-Visuellement, l'autocorrélation spatiale est moins évidente mais le test de Moran indique malgré une présence significative. Notons toutefois que l'autocorrélation ne semble pas plus forte qu'à l'échelle des EPCI. En effet, nous obtenons ces valeurs pour chaque échelle :
+Visuellement, l'autocorrélation spatiale est moins évidente. Toutefois, elle est bien présente, comme l'indique le test de Moran. Notons toutefois que l'autocorrélation ne semble pas plus forte qu'à l'échelle des EPCI. En effet, nous obtenons ces valeurs pour chaque échelle :
 - EPCI : 0.45
 - départements : 0.43
 - régions : 0.33
 - carreaux : 0.43
 
-Ainsi, nous gardons l'échelle EPCI pour la suite. Les carreaux n'étant pas plus autocorrélés, l'échelle EPCI ne semble pas subir un effet MAUP. De plus, notons que garder l'échelle des carreaux auraient eu quelques incovénients.
+Ainsi, nous gardons l'échelle EPCI pour la suite. Les carreaux n'étant pas plus autocorrélés, l'échelle EPCI ne semble pas subir un effet MAUP. De plus, notons que garder l'échelle des carreaux auraient eu quelques incovénients :
 - Ce qui est mesuré n'est pas réllement un taux de pauvreté au sens strict tel que défini plus haut (60 % du revenu médian). En effet, à l'échelle des carreaux, l'Insee ne donne que le nombre de ménages pauvres et non la part d'individus en situation de pauvreté matérielle. Le taux que nous avons calculé est la part des ménages pauvres dans chaque carreau naturel. Ainsi, en réalité, il n'est pas réellement souhaitable d'utiliser cette échelle pour comparer les autocorrélations spatiales à différentes échelles géographiques.
 - 216 carreaux sur 145197 (0.15 ‰) n'ont pas de voisins, ce qui les fait retirer de l'étude. Ces carreaux retirés sont typés : ce sont généralement des carreaux dans des zones à faible densité. Leur retrait, même minime, peut ainsi apporter du biais. 
 
@@ -716,7 +716,7 @@ round(mean(card(voisins_carreaux) == 0) * 100,2)
 
 L’analyse exploratoire spatiale a mis en évidence une autocorrélation spatiale significative du taux de pauvreté, ce qui suggère que des territoires voisins présentent des niveaux de pauvreté proches.
 
-Toutefois, il est possible d'aller au-delà de cette analyse descriptive en identifiant les facteurs explicatifs de ces disparités. Nous modélisons donc le taux de pauvreté en fonction de caractéristiques socio-économiques observables, disponbles à l'échelle des EPCI que nous avons retenue.
+Toutefois, il est possible d'aller au-delà de cette analyse descriptive en identifiant les facteurs explicatifs de ces disparités. Nous modélisons donc le taux de pauvreté en fonction de caractéristiques socio-économiques observables, disponibles à l'échelle que nous avons retenue, l'échelle des EPCI.
 
 ## Modèle linéaire classique
 
@@ -732,7 +732,7 @@ summary(modele_mco_1)
 ```
 
 ```{r}
-vif(modele_mco_1)
+# vif(modele_mco_1)
 ```
 
 Certaines variables ne semblent pas significatives et le modèle semble saturé. Le message d'erreur du VIF indique que certaines variables sont parfaitement colinéaires. On peut par exemple penser aux variables PART_SALAIRES, PART_PREST_SOC, PART_PATRIMOINE qui somment presque à 100%. C'est pour cela que deux d'entre elles ne sont pas estimées par le modèle. Elles montrent une colinéarité parfaite. De plus, le R2 est étonnamment très élevé, indiquant un potentiel sur-ajustement.
@@ -780,7 +780,7 @@ Tout est significatif. La structure spatiale est donc essentielle pour modélise
 
 ## Modèle spatial de Durbin (SDM)
 
-On met d'abord en place un modèle spatial de Durbin (SDM), comme précaunisé par Elhorst. Il s'agit du modèle le plus robuste.
+On met d'abord en place un modèle spatial de Durbin (SDM), comme préconisé par Elhorst. Il s'agit du modèle le plus robuste.
 
 ```{r}
 # SDM
@@ -842,9 +842,9 @@ Le modèle SDM est nettement meilleur que le modèle SEM. La statistique de test
 
 ## Biais et limites de l'analyse
 
-Plusieurs critiques peuvent être émises quant à la modélisation retenue. Tout d'abord, celle-ci repose sur le choix de la matrice de cointiguïté et sur l'échelle géographique retenue. La pauvreté étant un phénomène diffus, elle n'a pas des frontières identiques à celles des EPCI, si tant est qu'il y ait des frontières nettes. L'idéal serait de comparer nos résultats à ceux obtenus en utlisant l'échelle des zones d'emploi -- proche des EPCI -- ainsi que plusieurs autres définitions du voisinnage (comme les k plus proches voisins). La modélisation peut également faire face à un problème de simultanéité, certaines variables non observées pouvant influencer la pauvreté dans tout un voisinnage. On peut penser à une politique régionale spécifique en matière d'emploi (par exemple la région Occitanie en matière de formation dans les métiers de la construction aérospatiale).
+Plusieurs critiques peuvent être émises quant à la modélisation retenue. Tout d'abord, celle-ci repose sur le choix de la matrice de cointiguïté et sur l'échelle géographique retenue. La pauvreté étant un phénomène diffus, elle n'a pas des frontières identiques à celles des EPCI, si tant est qu'il y ait des frontières nettes. L'idéal serait de comparer nos résultats à ceux obtenus en utlisant l'échelle des zones d'emploi -- proche des EPCI -- ainsi que plusieurs autres définitions du voisinage (comme les k plus proches voisins). La modélisation peut également faire face à un problème de simultanéité, certaines variables non observées pouvant influencer la pauvreté dans tout un voisinnage. On peut penser à une politique régionale spécifique en matière d'emploi (par exemple la région Occitanie en matière de formation dans les métiers de la construction aérospatiale).
 
-De plus, il est difficile d'établir des relations causales à partir des corrélations spatiales. Certains effets indirects, comme celui du chômage, sont difficilement analysables. Ils pourraient cacher des corrélations falacieuses ou des effets indirects complexes. Au-delà des problèmes d'endogénéité ou de variables omises, le fait que l'étude soit réalisée à partir d'une seule année empêche l'identification d'une potentielle causalité. La pauvreté étant un processus long, il aurait été intéressant d'étudier un modèle de données de panel, comme l'ont pu faire Simon Beck, Nathalie Missègue et Juliette Ponceau dans [« Les facteurs qui protègent de la pauvreté n’aident pas forcément à s’en sortir », in *Les revenus et le patrimoine des ménages*, édition 2014, Insee Références, Insee, 2014](https://www.insee.fr/fr/statistiques/1374589?sommaire=1374593).
+De plus, il est difficile d'établir des relations causales à partir des corrélations spatiales. Certains effets indirects, comme celui du chômage, sont difficilement analysables. Ils pourraient cacher des corrélations falacieuses ou des effets indirects complexes. Au-delà des problèmes d'endogénéité ou de variables omises, le fait que l'étude soit réalisée à partir d'une seule année empêche l'identification d'une potentielle causalité. La pauvreté étant un processus long, il aurait été intéressant d'étudier un modèle de données de panel, comme ont pu le faire Simon Beck, Nathalie Missègue et Juliette Ponceau dans [« Les facteurs qui protègent de la pauvreté n’aident pas forcément à s’en sortir », in *Les revenus et le patrimoine des ménages*, édition 2014, Insee Références, Insee, 2014](https://www.insee.fr/fr/statistiques/1374589?sommaire=1374593).
 
 Enfin, la modélisation peut faire face à des problèmes d'hétérogénéité spatiale. Le lien entre les différentes variables peut être différent d'une région à une autre. Une extension de l'étude serait la mise en place d'un modèle plus complexe, prenant en compte cette potentielle hétérogénéité.
 
@@ -860,8 +860,10 @@ L'analyse des impacts du Spatial Durbin Model (SDM) nous permet de répondre aux
 
 Un effet de composition indéniable : la pauvreté locale reste fortement ancrée dans les caractéristiques socio-économiques des habitants. L’absence de diplôme, la part de familles monoparentales et le chômage local sont des moteurs directs et systématiques de la précarité au sein d'un EPCI.
 
-Une hétérogénéité structurelle marquée : la facteur le plus pesant de notre modèle reste les inégalités internes de revenus (Ratio D9/D1). Avec un impact total de 6,82, il apparaît que la pauvreté n'est pas seulement un manque de ressources absolu, mais le résultat d'une structure de distribution des richesses très inégalitaire qui "produit" de la précarité, tant localement que par débordement sur les voisins. Une dépendance spatiale significative : le paramètre Rho (0,50) confirme que la pauvreté n'est pas un isolat statistique. Elle se diffuse par "contagion" spatiale. Toutefois, cette diffusion n'est pas uniforme. Le niveau de vie et les inégalités agissent de manière globale (effets indirects significatifs). On trouve également une certaine concentration. Le chômage et le faible niveau de diplôme semblent suivre une logique de polarisation. L'effet indirect négatif suggère que ces populations se concentrent dans certains pôles, créant des disparités marquées avec leurs voisins immédiats.
+Une hétérogénéité structurelle marquée : la facteur le plus pesant de notre modèle reste les inégalités internes de revenus (Ratio D9/D1). Avec un impact total de 6,82, il apparaît que la pauvreté n'est pas seulement un manque absolu de ressources, mais le résultat d'une structure de distribution des richesses inégalitaire qui peut motiver la précarité, tant localement que par débordement sur les voisins.
 
-En somme, l'étude démontre que la pauvreté en France n'est pas un phénomène isolé spatialement mais une dynamique profondément ancrée dans l'espace intercommunal. Si les caractéristiques propres à chaque territoire expliquent une large part de la précarité, l'influence des voisins et le poids des inégalités de revenus structurent véritablement la géographie de la pauvreté. Il serait possible d'étendre l'étude, notamment en tenant compte de données de panel, ou encore en construisant un modèle plus complexe pouvant permettre d'établir de véritables relations de causalité.
+Une dépendance spatiale significative : le paramètre Rho (0,50) confirme que la pauvreté se diffuse spatialement. Toutefois, cette diffusion n'est pas uniforme. Le niveau de vie et les inégalités agissent de manière globale (effets indirects significatifs). On trouve également une certaine concentration. Le chômage et le faible niveau de diplôme semblent suivre une logique de polarisation. L'effet indirect négatif suggère que ces populations se concentrent à certains endroits, créant des disparités marquées avec les voisins immédiats.
 
-Concluons en rappellant que nous nous sommes concentrer que sur la pauvreté monétaire. Or la pauvreté est multidimensionnelle lorsque l'on tient compte des privations matérielles et sociales ; sa mesure pose à elle seule un problème statistique majure.
+En somme, l'étude démontre que la pauvreté en France n'est pas un phénomène isolé spatialement mais une dynamique profondément ancrée dans l'espace intercommunal. Si les caractéristiques propres à chaque territoire expliquent une large part de la précarité, l'influence des voisins et le poids des inégalités de revenus structurent également la géographie de la pauvreté. Il serait possible d'étendre l'étude, notamment en tenant compte de données de panel, ou encore en construisant un modèle plus complexe pouvant permettre d'établir des relations de causalité.
+
+Concluons en rappellant que nous nous sommes concentrés uniquement sur la précarité monétaire. Or la pauvreté est multidimensionnelle. On peut tenir compte des privation matérielles ou des différences sociales. La mesure de la pauvreté pose à elle seule un problème statistique majeur.
