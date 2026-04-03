@@ -14,29 +14,25 @@ output:
 
 Nous proposons d'étudier la pauvreté en utilisant les données à différentes échelles géographiques fournies par l'Insee.
 
-Le taux de pauvreté est défini comme la part d'individus étant en situation de pauvreté monétaire, un seuil fixé en France à 60 % du niveau de vie médian pour une année donnée. Le calcul de ce taux nécessite donc des informations précises sur les revenus des ménages. Pour des questions méthodologiques, l'Insee ne donne le taux de pauvreté de façon exhaustive à une échelle géographique donnée que jusqu'aux intercommunalités, les EPCI. A l'échelle des communes, le taux est donné pour certaines mais il ne l'est pas pour toutes.
+Le taux de pauvreté est défini comme la part d'individus étant en situation de pauvreté monétaire, un seuil fixé en France à 60 % du niveau de vie médian pour une année donnée. Le calcul de ce taux nécessite donc des informations précises sur les revenus des ménages. Or, pour des questions méthodologiques, l'Insee ne donne le taux de pauvreté de façon exhaustive à une échelle géographique donnée que jusqu'au niveau des intercommunalités, les EPCI (Établissement public de coopération intercommunale). A l'échelle des communes, le taux est par exemple donné pour certaines mais il ne l'est pas pour toutes.
 
-La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment l'importance du diplôme, des revenus et de la composition des ménages sur la pauvreté. Lorsqu'on l'on utilise des données spatiales, il est toutefois nécessaire de tenir compte de la présence d'autocorrélation avant toute modélisation par des régressions.
+La finalité du projet est la modélisation de la pauvreté avec des variables que l'on suppose très corrélées à cette situation économique. La littérature pointe notamment le rôle du diplôme, des revenus et de la composition des ménages. Avant d'appliquer des régressions, il est toutefois nécessaire de tenir compte de la présence d'autocorrélations sur notre variable d'intérêt, étant en présence de données spatiales.
 
-Nous souhaitons donc dans un premier temps vérifier la présence d'autocorrélation spatiale pour le taux de pauvreté en France. Notons que cette autocorrélation est ici attendue : la pauvreté est un phénomène socio-économique qui ne se limite pas à des frontières administratives. Une forte autocorrélation spatiale est même recherchée en allant au niveau le plus fin possible afin de limiter l'effet MAUP (Modifiable Areal Unit Problem) dans notre analyse. Cet effet désigne le fait que les résultats d'une analyse spatiale peuvent varier selon le découpage géographique retenu : un même phénomène observé à l'échelle des régions, des départements ou des EPCI peut produire des conclusions statistiques différentes, voire contradictoires du fait de l'étendue géographique variable sur laquelle la moyenne d'un indicateur donné est calculée.
+Nous souhaitons donc dans un premier temps vérifier la présence de ces autocorrélations pour le taux de pauvreté en France. Notons que celles-ci sont ici attendues, voire même souhaitées. La pauvreté est un phénomène socio-économique qui ne se limite pas à des frontières administratives. De plus, une forte autocorrélation spatiale est recherchée en allant au niveau le plus fin possible afin de limiter l'effet MAUP (Modifiable Areal Unit Problem) dans notre analyse. Cet effet désigne le fait que les résultats d'une analyse spatiale peuvent varier selon le découpage géographique retenu : un même phénomène observé à l'échelle des régions, des départements ou des EPCI peut produire des conclusions statistiques différentes, voire contradictoires, du fait de l'étendue géographique variable sur laquelle la moyenne d'un indicateur donné est calculée.
 
-Dans un second temmps,
+Dans un second temps, nous tenterons d'obtenir la meilleure modélisation du taux de pauvreté en France en utilisant des données à une certaine échelle géographique et en corrigeant les autocorrélations spatiales. 
 
 # Installation des packages
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 packages_requis <- c("aws.s3", "dplyr", "stringr", "ggplot2", "sf", "mapsf",
                      "classInt", "rnaturalearth", "rnaturalearthdata",
                      "remotes", "spdep", "car", "spatialreg")
-
 if (!"pacman" %in% installed.packages()) {
   install.packages("pacman")
 }
 library(pacman)
-
 pacman::p_load(char = packages_requis)
-
-rm(packages_requis)
 ```
 
 # Données utilisées
