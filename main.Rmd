@@ -59,6 +59,18 @@ Les bases de données propres et consolidées sont stockées sur un cloud ; leur
 
 Il est possible de consuler les script R spécifiques à chaque base pour voir comment les données ont été nettoyées. Cela se fait sur le dépot GitHub de notre projet : <https://github.com/thomasguinhut/ensai_projet_analyse_spatiale_3a/tree/main/R/A-preparation_donnees>.
 
+Nous avons travaillé sur Onyxia, nos données sont disponibles sur un cloud. La commande suivante permet de travailler dans le bon environnement.
+
+```{r}
+Sys.setenv("AWS_ACCESS_KEY_ID" = "RM5M2NPP3RRIOVDQL1O2",
+           "AWS_SECRET_ACCESS_KEY" = "aCefhSvn0ySlxZvKr+Eag1WTK+WaMV7dLB1IOllS",
+           "AWS_DEFAULT_REGION" = "us-east-1",
+           "AWS_SESSION_TOKEN" = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NLZXkiOiJSTTVNMk5QUDNSUklPVkRRTDFPMiIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sImF1ZCI6WyJtaW5pby1kYXRhbm9kZSIsIm9ueXhpYSIsImFjY291bnQiXSwiYXV0aF90aW1lIjoxNzc0ODM5NDE1LCJhenAiOiJvbnl4aWEiLCJjbmYiOnsiamt0IjoiMTlOSzNmYzRTYXNCNkhaU2o3UzB4cXFNSjJteFRPZFhPNFRNSGZiTlk0VSJ9LCJlbWFpbCI6InRob21hcy5ndWluaHV0QGVsZXZlLmVuc2FpLmZyIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc3NTg0MzUyNCwiZmFtaWx5X25hbWUiOiJHdWluaHV0IiwiZ2l2ZW5fbmFtZSI6IlRob21hcyIsImdyb3VwcyI6WyJVU0VSX09OWVhJQSIsImVuc2FpLW1ldGhvZG8tM2EiXSwiaWF0IjoxNzc1MjM4NzExLCJpc3MiOiJodHRwczovL2F1dGgubGFiLnNzcGNsb3VkLmZyL2F1dGgvcmVhbG1zL3NzcGNsb3VkIiwianRpIjoib25ydHJ0OmYyYWJmMmFlLTQyNTEtZDk1Yy0zMGQwLWU2MmM1ZDRhZjA0NCIsIm5hbWUiOiJUaG9tYXMgR3Vpbmh1dCIsInBvbGljeSI6InN0c29ubHkiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ0aG9tYXNndWluaHV0IiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJkZWZhdWx0LXJvbGVzLXNzcGNsb3VkIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiIsImRlZmF1bHQtcm9sZXMtc3NwY2xvdWQiXSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBncm91cHMgZW1haWwiLCJzaWQiOiIzZTBhZmJhMC0wYTM3LTE4ODctYmQzMy1jNGI3MGYyNzFmYTAiLCJzdWIiOiI4NTIyOTU5ZC0zNzQwLTQ1MzMtOWIwOC04MGVmOWZhYzE2NWEiLCJ0eXAiOiJEUG9QIn0.9GD2yf49RFkAlK96_C-hZu36LX8UcUS6Q6W2jUfHPuOkd50XNcR4cqmbn24NT5iddtUavitmm4VrWEZ6f2WqJQ",
+           "AWS_S3_ENDPOINT"= "minio.lab.sspcloud.fr")
+```
+
+Nos données peuvent être récupérées avec les commandes suivantes.
+
 ```{r}
 epci <-
   aws.s3::s3read_using(
